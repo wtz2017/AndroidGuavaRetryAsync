@@ -1,0 +1,198 @@
+/*
+ * Copyright 2012-2015 Ray Holder
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.github.rholder.retry.async;
+
+import com.github.rholder.retry.Attempt;
+import com.github.rholder.retry.BlockStrategies;
+import com.github.rholder.retry.BlockStrategy;
+import com.github.rholder.retry.RetryListener;
+import com.github.rholder.retry.Retryer;
+import com.github.rholder.retry.StopStrategies;
+import com.github.rholder.retry.StopStrategy;
+import com.github.rholder.retry.WaitStrategies;
+import com.github.rholder.retry.WaitStrategy;
+import com.github.rholder.retry.predicates.ExceptionClassPredicate;
+import com.github.rholder.retry.predicates.ExceptionPredicate;
+import com.github.rholder.retry.predicates.ResultPredicate;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Nonnull;
+
+/**
+ * A builder used to configure and create a {@link Retryer}.
+ *
+ * @param <V> result of a {@link Retryer}'s call, the type of the call return value
+ * @author JB
+ * @author Jason Dunkelberger (dirkraft)
+ */
+public class AsyncRetryerBuilder<V> {
+    private StopStrategy stopStrategy;
+    private WaitStrategy waitStrategy;
+    private BlockStrategy blockStrategy;
+    private Predicate<Attempt<V>> rejectionPredicate = Predicates.alwaysFalse();
+    private List<RetryListener> listeners = new ArrayList<RetryListener>();
+
+    private AsyncRetryerBuilder() {
+    }
+
+    /**
+     * Constructs a new builder
+     *
+     * @param <V> result of a {@link Retryer}'s call, the type of the call return value
+     * @return the new builder
+     */
+    public static <V> AsyncRetryerBuilder<V> newBuilder() {
+        return new AsyncRetryerBuilder<V>();
+    }
+
+    /**
+     * Adds a listener that will be notified of each attempt that is made
+     *
+     * @param listener Listener to add
+     * @return <code>this</code>
+     */
+    public AsyncRetryerBuilder<V> withRetryListener(@Nonnull RetryListener listener) {
+        Preconditions.checkNotNull(listener, "listener may not be null");
+        listeners.add(listener);
+        return this;
+    }
+
+    /**
+     * Sets the wait strategy used to decide how long to sleep between failed attempts.
+     * The default strategy is to retry immediately after a failed attempt.
+     *
+     * @param waitStrategy the strategy used to sleep between failed attempts
+     * @return <code>this</code>
+     * @throws IllegalStateException if a wait strategy has already been set.
+     */
+    public AsyncRetryerBuilder<V> withWaitStrategy(@Nonnull WaitStrategy waitStrategy) throws IllegalStateException {
+        Preconditions.checkNotNull(waitStrategy, "waitStrategy may not be null");
+        Preconditions.checkState(this.waitStrategy == null, "a wait strategy has already been set %s", this.waitStrategy);
+        this.waitStrategy = waitStrategy;
+        return this;
+    }
+
+    /**
+     * Sets the stop strategy used to decide when to stop retrying. The default strategy is to not stop at all .
+     *
+     * @param stopStrategy the strategy used to decide when to stop retrying
+     * @return <code>this</code>
+     * @throws IllegalStateException if a stop strategy has already been set.
+     */
+    public AsyncRetryerBuilder<V> withStopStrategy(@Nonnull StopStrategy stopStrategy) throws IllegalStateException {
+        Preconditions.checkNotNull(stopStrategy, "stopStrategy may not be null");
+        Preconditions.checkState(this.stopStrategy == null, "a stop strategy has already been set %s", this.stopStrategy);
+        this.stopStrategy = stopStrategy;
+        return this;
+    }
+
+
+    /**
+     * Sets the block strategy used to decide how to block between retry attempts. The default strategy is to use Thread#sleep().
+     *
+     * @param blockStrategy the strategy used to decide how to block between retry attempts
+     * @return <code>this</code>
+     * @throws IllegalStateException if a block strategy has already been set.
+     */
+    public AsyncRetryerBuilder<V> withBlockStrategy(@Nonnull BlockStrategy blockStrategy) throws IllegalStateException {
+        Preconditions.checkNotNull(blockStrategy, "blockStrategy may not be null");
+        Preconditions.checkState(this.blockStrategy == null, "a block strategy has already been set %s", this.blockStrategy);
+        this.blockStrategy = blockStrategy;
+        return this;
+    }
+
+
+    /**
+     * Configures the retryer to retry if an exception (i.e. any <code>Exception</code> or subclass
+     * of <code>Exception</code>) is thrown by the call.
+     *
+     * @return <code>this</code>
+     */
+    public AsyncRetryerBuilder<V> retryIfException() {
+        rejectionPredicate = Predicates.or(rejectionPredicate, new ExceptionClassPredicate<V>(Exception.class));
+        return this;
+    }
+
+    /**
+     * Configures the retryer to retry if a runtime exception (i.e. any <code>RuntimeException</code> or subclass
+     * of <code>RuntimeException</code>) is thrown by the call.
+     *
+     * @return <code>this</code>
+     */
+    public AsyncRetryerBuilder<V> retryIfRuntimeException() {
+        rejectionPredicate = Predicates.or(rejectionPredicate, new ExceptionClassPredicate<V>(RuntimeException.class));
+        return this;
+    }
+
+    /**
+     * Configures the retryer to retry if an exception of the given class (or subclass of the given class) is
+     * thrown by the call.
+     *
+     * @param exceptionClass the type of the exception which should cause the retryer to retry
+     * @return <code>this</code>
+     */
+    public AsyncRetryerBuilder<V> retryIfExceptionOfType(@Nonnull Class<? extends Throwable> exceptionClass) {
+        Preconditions.checkNotNull(exceptionClass, "exceptionClass may not be null");
+        rejectionPredicate = Predicates.or(rejectionPredicate, new ExceptionClassPredicate<V>(exceptionClass));
+        return this;
+    }
+
+    /**
+     * Configures the retryer to retry if an exception satisfying the given predicate is
+     * thrown by the call.
+     *
+     * @param exceptionPredicate the predicate which causes a retry if satisfied
+     * @return <code>this</code>
+     */
+    public AsyncRetryerBuilder<V> retryIfException(@Nonnull Predicate<Throwable> exceptionPredicate) {
+        Preconditions.checkNotNull(exceptionPredicate, "exceptionPredicate may not be null");
+        rejectionPredicate = Predicates.or(rejectionPredicate, new ExceptionPredicate<V>(exceptionPredicate));
+        return this;
+    }
+
+    /**
+     * Configures the retryer to retry if the result satisfies the given predicate.
+     *
+     * @param resultPredicate a predicate applied to the result, and which causes the retryer
+     *                        to retry if the predicate is satisfied
+     * @return <code>this</code>
+     */
+    public AsyncRetryerBuilder<V> retryIfResult(@Nonnull Predicate<V> resultPredicate) {
+        Preconditions.checkNotNull(resultPredicate, "resultPredicate may not be null");
+        rejectionPredicate = Predicates.or(rejectionPredicate, new ResultPredicate<V>(resultPredicate));
+        return this;
+    }
+
+    /**
+     * Builds the AsyncRetryer.
+     *
+     * @return the built AsyncRetryer.
+     */
+    public AsyncRetryer<V> build() {
+        StopStrategy theStopStrategy = stopStrategy == null ? StopStrategies.neverStop() : stopStrategy;
+        WaitStrategy theWaitStrategy = waitStrategy == null ? WaitStrategies.noWait() : waitStrategy;
+        BlockStrategy theBlockStrategy = blockStrategy == null ? BlockStrategies.threadSleepStrategy() : blockStrategy;
+
+        return new AsyncRetryer<V>(theStopStrategy, theWaitStrategy, theBlockStrategy, rejectionPredicate, listeners);
+    }
+
+}

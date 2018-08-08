@@ -11,7 +11,6 @@ import com.github.rholder.retry.RetryerBuilder;
 import com.github.rholder.retry.StopStrategies;
 import com.github.rholder.retry.WaitStrategies;
 import com.github.rholder.retry.async.AsyncRetryer;
-import com.github.rholder.retry.async.AsyncRetryerBuilder;
 import com.google.common.base.Predicates;
 
 import java.io.PrintWriter;
@@ -62,11 +61,11 @@ public class RetryStrategyManager {
                 .withStopStrategy(StopStrategies.stopAfterAttempt(5))
                 // 设置每次重试结果的监听
                 .withRetryListener(new DefaultRetryListener<>(tag))
-                .build();
+                .buildRetryer();
     }
 
     public AsyncRetryer<Boolean> getAsyncRetryer(String tag) {
-        return AsyncRetryerBuilder.<Boolean>newBuilder()
+        return RetryerBuilder.<Boolean>newBuilder()
                 // 抛出runtime异常、checked异常时都会重试，但是抛出error不会重试
                 .retryIfException()
                 // 结果返回false也需要重试
@@ -87,7 +86,7 @@ public class RetryStrategyManager {
                 .withStopStrategy(StopStrategies.stopAfterAttempt(5))
                 // 设置每次重试结果的监听
                 .withRetryListener(new DefaultRetryListener<>(tag))
-                .build();
+                .buildAsyncRetryer();
     }
 
     class DefaultRetryListener<Boolean> implements RetryListener {

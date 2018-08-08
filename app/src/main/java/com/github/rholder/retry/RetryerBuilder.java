@@ -16,17 +16,14 @@
 
 package com.github.rholder.retry;
 
-import com.github.rholder.retry.predicates.ExceptionClassPredicate;
-import com.github.rholder.retry.predicates.ExceptionPredicate;
-import com.github.rholder.retry.predicates.ResultPredicate;
+import com.github.rholder.retry.async.AsyncRetryer;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.annotation.Nonnull;
 
 /**
  * A builder used to configure and create a {@link Retryer}.
@@ -191,7 +188,7 @@ public class RetryerBuilder<V> {
      *
      * @return the built retryer.
      */
-    public Retryer<V> build() {
+    public Retryer<V> buildRetryer() {
         AttemptTimeLimiter<V> theAttemptTimeLimiter = attemptTimeLimiter == null ? AttemptTimeLimiters.<V>noTimeLimit() : attemptTimeLimiter;
         StopStrategy theStopStrategy = stopStrategy == null ? StopStrategies.neverStop() : stopStrategy;
         WaitStrategy theWaitStrategy = waitStrategy == null ? WaitStrategies.noWait() : waitStrategy;
@@ -200,4 +197,68 @@ public class RetryerBuilder<V> {
         return new Retryer<V>(theAttemptTimeLimiter, theStopStrategy, theWaitStrategy, theBlockStrategy, rejectionPredicate, listeners);
     }
 
+    /**
+     * Builds the AsyncRetryer.
+     *
+     * @return the built AsyncRetryer.
+     */
+    public AsyncRetryer<V> buildAsyncRetryer() {
+        StopStrategy theStopStrategy = stopStrategy == null ? StopStrategies.neverStop() : stopStrategy;
+        WaitStrategy theWaitStrategy = waitStrategy == null ? WaitStrategies.noWait() : waitStrategy;
+        BlockStrategy theBlockStrategy = blockStrategy == null ? BlockStrategies.threadSleepStrategy() : blockStrategy;
+
+        return new AsyncRetryer<V>(theStopStrategy, theWaitStrategy, theBlockStrategy, rejectionPredicate, listeners);
+    }
+
+    private static final class ExceptionClassPredicate<V> implements Predicate<Attempt<V>> {
+
+        private Class<? extends Throwable> exceptionClass;
+
+        public ExceptionClassPredicate(Class<? extends Throwable> exceptionClass) {
+            this.exceptionClass = exceptionClass;
+        }
+
+        @Override
+        public boolean apply(Attempt<V> attempt) {
+            if (!attempt.hasException()) {
+                return false;
+            }
+            return exceptionClass.isAssignableFrom(attempt.getExceptionCause().getClass());
+        }
+    }
+
+    private static final class ResultPredicate<V> implements Predicate<Attempt<V>> {
+
+        private Predicate<V> delegate;
+
+        public ResultPredicate(Predicate<V> delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public boolean apply(Attempt<V> attempt) {
+            if (!attempt.hasResult()) {
+                return false;
+            }
+            V result = attempt.getResult();
+            return delegate.apply(result);
+        }
+    }
+
+    private static final class ExceptionPredicate<V> implements Predicate<Attempt<V>> {
+
+        private Predicate<Throwable> delegate;
+
+        public ExceptionPredicate(Predicate<Throwable> delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public boolean apply(Attempt<V> attempt) {
+            if (!attempt.hasException()) {
+                return false;
+            }
+            return delegate.apply(attempt.getExceptionCause());
+        }
+    }
 }

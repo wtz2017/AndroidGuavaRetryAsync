@@ -220,10 +220,11 @@ public final class AsyncRetryer<V> {
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                             if (ret != null) {
+                                final Throwable t = new RetryException(attemptNumber, attempt);
                                 Observable.create(new ObservableOnSubscribe<Void>() {
                                     @Override
                                     public void subscribe(ObservableEmitter<Void> e) throws Exception {
-                                        ret.onException(new RetryException(attemptNumber, attempt));
+                                        ret.onException(t);
                                     }
                                 })
                                 .subscribeOn(AndroidSchedulers.mainThread()) // callback on main thread

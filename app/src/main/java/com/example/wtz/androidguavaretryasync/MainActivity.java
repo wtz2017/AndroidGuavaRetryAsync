@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.Button;
 
 import com.github.rholder.retry.async.AsyncCallResult;
+import com.github.rholder.retry.async.AsyncCallable;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -41,6 +42,14 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 testGuavaAsyncRetry();
+            }
+        });
+
+        Button button3 = findViewById(R.id.btn_3);
+        button3.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                testObjectAsyncRetry();
             }
         });
     }
@@ -102,6 +111,31 @@ public class MainActivity extends Activity {
                 @Override
                 public void onException(Throwable t) {
                     Log.d(TAG, "Async end..." + df.format(new Date()) + ", thread id:" + Thread.currentThread().getId() + ", exception=" + t.getMessage());
+                }
+            });
+    }
+
+    private void testObjectAsyncRetry() {
+        final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss,SSS");
+        Log.d(TAG, "Object Async begin..." + df.format(new Date()) + ", invoke thread id:" + Thread.currentThread().getId());
+
+        // 异步调用
+        RetryStrategyManager.getInstance().getObjectRetryerBuilder().buildAsyncRetryer().call(
+            new AsyncCallable<Object>() {
+                @Override
+                public void call(AsyncCallResult<Object> result) throws Exception {
+                    result.onResult(null);
+                }
+            },
+            new AsyncCallResult<Object>() {
+                @Override
+                public void onResult(Object result) {
+                    Log.d(TAG, "ObjectAsync end..." + df.format(new Date()) + ", thread id:" + Thread.currentThread().getId() + ", ret=" + result);
+                }
+
+                @Override
+                public void onException(Throwable t) {
+                    Log.d(TAG, "ObjectAsync end..." + df.format(new Date()) + ", thread id:" + Thread.currentThread().getId() + ", exception=" + t.getMessage());
                 }
             });
     }

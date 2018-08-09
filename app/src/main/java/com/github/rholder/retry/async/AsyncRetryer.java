@@ -147,7 +147,7 @@ public final class AsyncRetryer<V> {
         callInternal(callable, result);
     }
 
-    public void callInternal(final AsyncCallable<V> callable, final AsyncCallResult<V> ret) {
+    private void callInternal(final AsyncCallable<V> callable, final AsyncCallResult<V> ret) {
         attemptNumber++;
 
         AsyncCallResult<V> acr = new AsyncCallResult<V>() {
@@ -172,7 +172,7 @@ public final class AsyncRetryer<V> {
                             listener.onRetry(attempt);
                         }
 
-                        if (!rejectionPredicate.<Boolean>apply(attempt)) {
+                        if (!rejectionPredicate.apply(attempt)) {
                             // Do not meet retrial conditions
                             if (ret != null) {
                                 try {

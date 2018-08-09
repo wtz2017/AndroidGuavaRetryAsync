@@ -61,6 +61,16 @@ public class RetryStrategyManager {
                 .withRetryListener(new DefaultRetryListener<>(tag));
     }
 
+    public RetryerBuilder<Object> getObjectRetryerBuilder() {
+        return RetryerBuilder.<Object>newBuilder()
+                .retryIfException()
+                .retryIfResult(Predicates.<Object>isNull())
+                .withWaitStrategy(WaitStrategies.fixedWait(2, TimeUnit.SECONDS))
+                .withBlockStrategy(BlockStrategies.threadSleepStrategy())
+                .withStopStrategy(StopStrategies.stopAfterAttempt(3))
+                .withRetryListener(new DefaultRetryListener("TestObject"));
+    }
+
     class DefaultRetryListener<Boolean> implements RetryListener {
 
         private String tag;

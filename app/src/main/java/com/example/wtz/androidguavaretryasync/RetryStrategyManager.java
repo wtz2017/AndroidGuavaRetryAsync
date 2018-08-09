@@ -6,11 +6,9 @@ import com.github.rholder.retry.Attempt;
 import com.github.rholder.retry.AttemptTimeLimiters;
 import com.github.rholder.retry.BlockStrategies;
 import com.github.rholder.retry.RetryListener;
-import com.github.rholder.retry.Retryer;
 import com.github.rholder.retry.RetryerBuilder;
 import com.github.rholder.retry.StopStrategies;
 import com.github.rholder.retry.WaitStrategies;
-import com.github.rholder.retry.async.AsyncRetryer;
 import com.google.common.base.Predicates;
 
 import java.io.PrintWriter;
@@ -37,7 +35,7 @@ public class RetryStrategyManager {
         return instance;
     }
 
-    public Retryer<Boolean> getSyncRetryer(String tag) {
+    public RetryerBuilder<Boolean> getDefaultRetryerBuilder(String tag) {
         return RetryerBuilder.<Boolean>newBuilder()
                 // 抛出runtime异常、checked异常时都会重试，但是抛出error不会重试
                 .retryIfException()
@@ -54,39 +52,13 @@ public class RetryStrategyManager {
 //                .withWaitStrategy(WaitStrategies.exponentialWait(15000, 30, TimeUnit.MINUTES))
                 // 设置延时实现的阻塞策略
                 .withBlockStrategy(BlockStrategies.threadSleepStrategy())
-                // 设置每次重试超时时间
+                // 设置每次重试超时时间，不支持异步重试调用
                 .withAttemptTimeLimiter(AttemptTimeLimiters.<Boolean>fixedTimeLimit(3, TimeUnit.SECONDS))
                 // 设置重试结束策略
 //                .withStopStrategy(StopStrategies.neverStop())
                 .withStopStrategy(StopStrategies.stopAfterAttempt(5))
                 // 设置每次重试结果的监听
-                .withRetryListener(new DefaultRetryListener<>(tag))
-                .buildRetryer();
-    }
-
-    public AsyncRetryer<Boolean> getAsyncRetryer(String tag) {
-        return RetryerBuilder.<Boolean>newBuilder()
-                // 抛出runtime异常、checked异常时都会重试，但是抛出error不会重试
-                .retryIfException()
-                // 结果返回false也需要重试
-                .retryIfResult(Predicates.equalTo(false))
-                // 设置重试之间等待延时策略
-//                .withWaitStrategy(WaitStrategies.noWait())
-                .withWaitStrategy(WaitStrategies.fixedWait(3, TimeUnit.SECONDS))
-//                .withWaitStrategy(WaitStrategies.randomWait(5, TimeUnit.SECONDS))
-//                .withWaitStrategy(WaitStrategies.randomWait(2, TimeUnit.SECONDS, 5, TimeUnit.SECONDS))
-//                .withWaitStrategy(WaitStrategies.incrementingWait(3, TimeUnit.SECONDS, 2, TimeUnit.SECONDS))
-//                // 30*1000*(斐波拉契数列：1, 1, 2, 3, 5, 8, 13, 21, 34, 55...),最大30分钟
-//                .withWaitStrategy(WaitStrategies.fibonacciWait(30000, 30, TimeUnit.MINUTES))
-//                .withWaitStrategy(WaitStrategies.exponentialWait(15000, 30, TimeUnit.MINUTES))
-                // 设置延时实现的阻塞策略
-                .withBlockStrategy(BlockStrategies.threadSleepStrategy())
-                // 设置重试结束策略
-//                .withStopStrategy(StopStrategies.neverStop())
-                .withStopStrategy(StopStrategies.stopAfterAttempt(5))
-                // 设置每次重试结果的监听
-                .withRetryListener(new DefaultRetryListener<>(tag))
-                .buildAsyncRetryer();
+                .withRetryListener(new DefaultRetryListener<>(tag));
     }
 
     class DefaultRetryListener<Boolean> implements RetryListener {

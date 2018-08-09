@@ -56,7 +56,7 @@ public class MainActivity extends Activity {
                 boolean ret;
                 try {
                     ret = RetryStrategyManager.getInstance()
-                            .getSyncRetryer("SyncTest").call(new RetryCallable());
+                            .getDefaultRetryerBuilder("SyncTest").buildRetryer().call(new RetryCallable());
                 } catch (Exception e) {
                     ret = false;
                 }
@@ -91,7 +91,7 @@ public class MainActivity extends Activity {
         Log.d(TAG, "Async begin..." + df.format(new Date()) + ", invoke thread id:" + Thread.currentThread().getId());
 
         // 异步调用
-        RetryStrategyManager.getInstance().getAsyncRetryer("AsyncTest").call(
+        RetryStrategyManager.getInstance().getDefaultRetryerBuilder("AsyncTest").buildAsyncRetryer().call(
             new RetryCallable(),
             new AsyncCallResult<Boolean>() {
                 @Override

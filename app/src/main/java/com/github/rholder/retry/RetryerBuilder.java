@@ -184,9 +184,9 @@ public class RetryerBuilder<V> {
     }
 
     /**
-     * Builds the retryer.
+     * Builds the synchronous retryer.
      *
-     * @return the built retryer.
+     * @return the built synchronous retryer.
      */
     public Retryer<V> buildRetryer() {
         AttemptTimeLimiter<V> theAttemptTimeLimiter = attemptTimeLimiter == null ? AttemptTimeLimiters.<V>noTimeLimit() : attemptTimeLimiter;
@@ -198,9 +198,9 @@ public class RetryerBuilder<V> {
     }
 
     /**
-     * Builds the AsyncRetryer.
+     * Builds the asynchronous retryer.
      *
-     * @return the built AsyncRetryer.
+     * @return the built asynchronous retryer.
      */
     public AsyncRetryer<V> buildAsyncRetryer() {
         StopStrategy theStopStrategy = stopStrategy == null ? StopStrategies.neverStop() : stopStrategy;
